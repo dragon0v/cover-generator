@@ -48,15 +48,15 @@ function RedirectLogic() {
         (async () => {
             if (location.pathname === '/' || location.pathname === '/src/popup/popup.html') {
                 const config = await browserStorageService.loadLLMSettings();
-                if (!config) {
-                    navigate('/settings', { replace: true });
-                    return;
-                }
-                const profile = await browserStorageService.loadProfile();
-                if (!profile) {
-                    navigate('/user', { replace: true });
-                    return;
-                }
+                // if (!config) {
+                //     navigate('/settings', { replace: true });
+                //     return;
+                // }
+                // const profile = await browserStorageService.loadProfile();
+                // if (!profile) {
+                //     navigate('/user', { replace: true });
+                //     return;
+                // }
                 console.log("redirect to /job");
                 navigate('/job');
             }
