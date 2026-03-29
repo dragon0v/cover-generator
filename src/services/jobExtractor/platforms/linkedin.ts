@@ -52,12 +52,20 @@ export class LinkedInExtractor implements JobExtractor {
         throw new ExtractionError('Could not extract job description', this.name, url);
       }
 
+      // Extract additional metadata (location, posted date, applicant count)
+      const metadata = this.extractMetadata(document);
+      console.log('Extracted metadata:', metadata);
+      // No need to throw error
+
       const jobDetails: JobDetails = {
         id: uuidv4(),
         url,
         company,
         title,
         description,
+        location: metadata.location,           // 注入地点
+        postedAt: metadata.postedAt,           // 注入发布时间
+        applicantCount: metadata.applicantCount, // 注入申请人数
         platform: JobPlatform.LINKEDIN,
         extractedAt: new Date(),
         isManual: false,
@@ -232,5 +240,71 @@ export class LinkedInExtractor implements JobExtractor {
     }
 
     return skills;
+  }
+
+  private extractMetadata(document: Document): { location?: string, postedAt?: string, applicantCount?: string } {
+    let location: string | undefined;
+    let postedAt: string | undefined;
+    let applicantCount: string | undefined;
+
+    // 1. 缩小查找范围，避免抓到顶部导航栏 (如果找不到 main，兜底使用 document)
+    const mainContainer = document.querySelector('main') || document;
+
+    // 2. 只找 p 标签或者特定结构的容器，避开最外层巨大的 div
+    const candidates = mainContainer.querySelectorAll('p, div.job-details-jobs-unified-top-card__primary-description');
+
+    for (const el of Array.from(candidates)) {
+      // 把内部多个空格、换行全部压缩成一个空格
+      const text = el.textContent?.replace(/\s+/g, ' ').trim() || '';
+
+      // 🌟 核心防御：
+      // 1. 长度必须在合理范围内 (< 150 字符)，直接秒杀那一大坨导航栏乱码！
+      // 2. 必须包含分隔符 '·' 或 '•'
+      // 3. 排除明显包含导航栏特征的脏数据
+      if (
+        text.length > 5 && 
+        text.length < 150 && 
+        (text.includes('·') || text.includes('•')) &&
+        !text.includes('Skip to') && 
+        !text.includes('notifications')
+      ) {
+        // 兼容两种常见的点号分割
+        const parts = text.split(/[·•]/).map(s => s.trim());
+
+        if (parts.length >= 2) {
+          // 遍历切出来的每一小块，进行智能分类
+          for (const part of parts) {
+            const lowerPart = part.toLowerCase();
+            
+            if (/ago|minute|hour|day|week|month/i.test(lowerPart)) {
+              postedAt = part;
+            } else if (/apply|applicant/i.test(lowerPart)) {
+              applicantCount = part;
+            }
+          }
+
+          // 地点分配逻辑：找出既不是时间、也不是人数的剩余部分
+          const unassigned = parts.filter(p => p !== postedAt && p !== applicantCount);
+          if (unassigned.length > 0) {
+            // 通常带有逗号的 (如 "Stockholm, Sweden") 就是地点
+            // 如果没有逗号，优先取剩下的第一个
+            location = unassigned.find(p => p.includes(',')) || unassigned[0];
+            
+            // 清理掉可能的残留 (比如 Hybrid 标签)
+            if (location.includes('(')) {
+              location = location.split('(')[0].trim();
+            }
+          }
+
+          // 只要成功抓到任意两个有效信息，就认定找对了地方，立即停止循环！
+          if (postedAt || applicantCount || location) {
+            console.log('🌟 成功捕获元数据:', { location, postedAt, applicantCount });
+            break; 
+          }
+        }
+      }
+    }
+
+    return { location, postedAt, applicantCount };
   }
 }

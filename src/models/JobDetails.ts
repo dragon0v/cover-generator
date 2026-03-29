@@ -29,6 +29,11 @@ export interface JobDetails {
   /** Full job description (10-10000 chars) */
   description: string;
 
+  /** Optional metadata */
+  location?: string; // Optional job location (e.g. "Stockholm, Sweden")
+  postedAt?: string; // Optional posted date (e.g. "2024-01-15")
+  applicantCount?: string; // Optional number of applicants (if available)
+
   /** Source platform */
   platform: JobPlatform;
 
