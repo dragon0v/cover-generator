@@ -20,6 +20,7 @@ export class LinkedInExtractor implements JobExtractor {
 
   async extract(document: Document): Promise<JobDetails | null> {
     try {
+      console.log('Starting LinkedIn extraction for URL:', document.location.href);
       const url = document.location.href;
       
       if (!this.canExtract(url)) {
@@ -32,18 +33,21 @@ export class LinkedInExtractor implements JobExtractor {
 
       // Extract company name
       const company = this.extractCompany(document);
+      console.log('Extracted company:', company);
       if (!company) {
         throw new ExtractionError('Could not extract company name', this.name, url);
       }
 
       // Extract job title
       const title = this.extractTitle(document);
+      console.log('Extracted title:', title);
       if (!title) {
         throw new ExtractionError('Could not extract job title', this.name, url);
       }
 
       // Extract job description
       const description = this.extractDescription(document);
+      console.log('Extracted description:', description);
       if (!description) {
         throw new ExtractionError('Could not extract job description', this.name, url);
       }
@@ -93,51 +97,82 @@ export class LinkedInExtractor implements JobExtractor {
   }
 
   private extractCompany(document: Document): string | null {
-    // LinkedIn job postings have company name in various selectors
+    // 优先尝试使用带有业务语义的属性选择器（URL 路径或 aria-label）
     const selectors = [
-      '.topcard__org-name-link',
+      'a[href*="/company/"]', // 🌟 新版：任何指向公司主页的链接
+      '[aria-label^="Company, "]', // 🌟 新版备用：带有公司标签的区块
+      '.jobs-unified-top-card__company-name', // 兼容旧版
       '.job-details-jobs-unified-top-card__company-name',
-      'a[data-tracking-control-name="public_jobs_topcard-org-name"]',
-      '.topcard__flavor--company',
-      '[class*="company-name"]',
+      '.topcard__org-name-link',
+      '.topcard__flavor--target'
     ];
 
     for (const selector of selectors) {
       const element = document.querySelector(selector);
-      if (element?.textContent) {
-        return element.textContent.trim();
+      if (element) {
+        // 如果抓到的是 aria-label (例如 "Company, Bambuser.")，做一下字符串清理
+        if (selector === '[aria-label^="Company, "]') {
+           const label = element.getAttribute('aria-label');
+           if (label) return label.replace('Company, ', '').replace('.', '').trim();
+        }
+        
+        const text = element.textContent?.trim();
+        if (text) {
+          // 清理多余的空白符和换行
+          return text.replace(/\s+/g, ' ');
+        }
       }
     }
-
     return null;
   }
 
   private extractTitle(document: Document): string | null {
-    // LinkedIn job title selectors
-    const selectors = [
-      '.topcard__title',
-      '.job-details-jobs-unified-top-card__job-title',
-      'h1[class*="job-title"]',
-      'h2[class*="job-title"]',
-    ];
+  // 1. 获取所有可能的标题容器
+  const containers = document.querySelectorAll('div[data-display-contents="true"] p');
+  
+  // 2. 定义公司名称（用来排除，防止 title 误抓成公司名）
+  const companyName = this.extractCompany(document);
 
-    for (const selector of selectors) {
-      const element = document.querySelector(selector);
-      if (element?.textContent) {
-        return element.textContent.trim();
+  for (const element of Array.from(containers)) {
+    const text = element.textContent?.trim();
+
+    if (text) {
+      // 🌟 核心过滤逻辑：
+      // 1. 排除掉和公司名完全一样的内容
+      // 2. 排除掉 Premium 广告和短字符（如 "Apply", "Save"）
+      // 3. 排除掉包含 "Company," 开头的无障碍标签
+      if (
+        text !== companyName && 
+        text.length > 3 && 
+        !/Try Premium|SEK 0|LinkedIn Premium|Company,/i.test(text)
+      ) {
+        console.log('🌟 成功锁定职位标题:', text);
+        return text;
       }
     }
-
-    return null;
   }
+
+  // 3. 兜底逻辑：如果上面的循环没找到，尝试找页面唯一的 h1
+  const h1 = document.querySelector('main h1') || document.querySelector('h1');
+  const h1Text = h1?.textContent?.trim();
+  if (h1Text && !h1Text.includes('Premium')) {
+    return h1Text;
+  }
+
+  return null;
+  }
+
 
   private extractDescription(document: Document): string | null {
     // LinkedIn job description is typically in a div with specific classes
+    // We prioritize data-testid as it's the most stable against UI updates
     const selectors = [
-      '.description__text',
+      '[data-testid="expandable-text-box"]', // 🌟 新版 LinkedIn 的终极稳定选择器
+      '.jobs-description__content',          // 兼容之前的版本
+      '.job-details-jobs-unified-top-card__job-insight', 
+      '.description__text',                  // 更老的版本
       '.show-more-less-html__markup',
       '[class*="job-description"]',
-      '.jobs-description__content',
     ];
 
     for (const selector of selectors) {

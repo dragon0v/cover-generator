@@ -18,7 +18,8 @@ export const api = {
         type: 'EXTRACT_JOB_DETAILS',
       });
     } catch (error) {
-      return new Error('Failed to extract job details from the page, please refresh the page and try again.');
+      console.error('Error extracting job details:', error);
+      return new Error(`Failed to extract job details from the page, please refresh the page and try again.\n${error}`);
     }
   },
 }
