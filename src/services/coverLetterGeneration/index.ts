@@ -4,8 +4,8 @@
  */
 
 import { UserProfile } from '../../models/userProfile';
-import { JobDetails } from '../../models/jobDetails';
-import { CoverLetterContent, CoverLetterState, LLMProviderEnum } from '../../models/coverLetterContent';
+import { JobDetails } from '../../models/JobDetails';
+import { CoverLetterContent, CoverLetterState, LLMProviderEnum } from '../../models/CoverLetterContent';
 import { buildPrompt, SectionInstructions } from './prompt';
 import { browserStorageService } from '../../infra/storage';
 import { createLogger } from '../../utils/logger';

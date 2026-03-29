@@ -4,11 +4,11 @@
  */
 
 import { UserProfile } from '../../models/userProfile';
-import { JobDetails } from '../../models/jobDetails';
+import { JobDetails } from '../../models/JobDetails';
 import { Task, Status } from '../../models/generationTask';
 import { BrowserStorageService, browserStorageService } from '../../infra/storage';
 import { LLMProvider, llmRegistry } from '../../infra/llm';
-import { CoverLetterContent, CoverLetterState, LLMProviderEnum } from '../../models/coverLetterContent';
+import { CoverLetterContent, CoverLetterState, LLMProviderEnum } from '../../models/CoverLetterContent';
 import { createLogger } from '../../utils/logger';
 import { COVER_LETTER_SCHEMA } from '@/infra/llm/schemas';
 import { buildPrompt } from '../coverLetterGeneration/prompt';

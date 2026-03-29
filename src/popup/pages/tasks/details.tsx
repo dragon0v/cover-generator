@@ -7,7 +7,7 @@ import { browserStorageService } from '@/infra/storage';
 import { exportPDF } from '@/services/pdfExporter';
 import { api } from '@/background/api';
 import { Task, Status } from '@/models/generationTask';
-import { CoverLetterContent } from '@/models/coverLetterContent';
+import { CoverLetterContent } from '@/models/CoverLetterContent';
 
 interface TaskDetailsProps {
     task: Task;

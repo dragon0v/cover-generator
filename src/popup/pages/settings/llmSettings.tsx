@@ -12,8 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/popup/components/ui/slider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/popup/components/ui/card';
 import { Spinner } from '@/popup/components/ui/spinner';
-import { LLMProviderConfig, LLM_CONFIG_CONSTRAINTS } from '@/models/llmProviderConfig';
-import { LLMProviderEnum } from '@/models/coverLetterContent';
+import { LLMProviderConfig, LLM_CONFIG_CONSTRAINTS } from '@/models/LLMProviderConfig';
+import { LLMProviderEnum } from '@/models/CoverLetterContent';
 
 interface LLMSettingsProps {
   config: LLMProviderConfig | null;

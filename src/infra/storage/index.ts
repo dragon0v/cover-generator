@@ -8,10 +8,10 @@
 
 import browser from 'webextension-polyfill';
 import { UserProfile } from '../../models/userProfile';
-import { LLMProviderConfig } from '../../models/llmProviderConfig';
-import { JobDetails } from '../../models/jobDetails';
+import { LLMProviderConfig } from '../../models/LLMProviderConfig';
+import { JobDetails } from '../../models/JobDetails';
 import { Task } from '../../models/generationTask';
-import { CoverLetterContent } from '@/models/coverLetterContent';
+import { CoverLetterContent } from '@/models/CoverLetterContent';
 
 // Type declaration for chrome global
 declare const chrome: any;

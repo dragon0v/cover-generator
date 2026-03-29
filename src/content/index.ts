@@ -4,7 +4,7 @@
  */
 
 import { Message } from "./api";
-import { JobDetails } from "@/models/jobDetails";
+import { JobDetails } from "@/models/JobDetails";
 import { ArbetsformedlingenExtractor } from "@/services/jobExtractor/platforms/arbetsformedlingen";
 import { LinkedInExtractor } from "@/services/jobExtractor/platforms/linkedin";
 import { ManualExtractor } from "@/services/jobExtractor/platforms/manual";

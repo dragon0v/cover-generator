@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import browser from 'webextension-polyfill';
 import { toast } from 'sonner';
-import { JobDetails, JobPlatform } from '@/models/jobDetails';
+import { JobDetails, JobPlatform } from '@/models/JobDetails';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/popup/components/ui/card';
 import { Input } from '@/popup/components/ui/input';
 import { Label } from '@/popup/components/ui/label';

@@ -1,4 +1,4 @@
-import { JobDetails } from "@/models/jobDetails";
+import { JobDetails } from "@/models/JobDetails";
 import browser from "webextension-polyfill";
 
 export type JobInfoMessage = {

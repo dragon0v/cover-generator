@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { LLMSettings } from './llmSettings';
 import { browserStorageService } from '@/infra/storage';
 import { llmRegistry } from '@/infra/llm';
-import { LLMProviderConfig } from '@/models/llmProviderConfig';
+import { LLMProviderConfig } from '@/models/LLMProviderConfig';
 
 import { Alert } from '@/popup/components/ui/alert'; // keep for error alert
 import { toast } from 'sonner';

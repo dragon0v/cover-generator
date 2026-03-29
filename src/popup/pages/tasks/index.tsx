@@ -5,7 +5,7 @@ import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../../components/ui/accordion';
 import { browserStorageService } from '@/infra/storage';
 import { Task, Status } from '@/models/generationTask';
-import { CoverLetterContent } from '@/models/coverLetterContent';
+import { CoverLetterContent } from '@/models/CoverLetterContent';
 import { Button } from '../../components/ui/button';
 import { exportPDF } from '@/services/pdfExporter';
 import { api } from '@/background/api';

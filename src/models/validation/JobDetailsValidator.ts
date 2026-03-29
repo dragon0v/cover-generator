@@ -3,7 +3,7 @@
  * Validates JobDetails data against constraints
  */
 
-import { JobDetails, JOB_DETAILS_CONSTRAINTS } from '../jobDetails';
+import { JobDetails, JOB_DETAILS_CONSTRAINTS } from '../JobDetails';
 
 export interface ValidationError {
   field: string;

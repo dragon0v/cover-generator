@@ -4,7 +4,7 @@
  */
 
 import { UserProfile } from './userProfile';
-import { JobDetails } from './jobDetails';
+import { JobDetails } from './JobDetails';
 import { SectionInstructions } from '../services/coverLetterGeneration/prompt';
 
 export enum Status {

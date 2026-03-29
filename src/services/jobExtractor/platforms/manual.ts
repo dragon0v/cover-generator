@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { JobDetails, JobPlatform } from '../../../models/jobDetails';
+import { JobDetails, JobPlatform } from '../../../models/JobDetails';
 import { JobExtractor } from '..';
 
 /**

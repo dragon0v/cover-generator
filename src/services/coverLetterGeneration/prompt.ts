@@ -4,7 +4,7 @@
  */
 
 import { UserProfile } from '../../models/userProfile';
-import { JobDetails } from '../../models/jobDetails';
+import { JobDetails } from '../../models/JobDetails';
 
 export const COVER_LETTER_PROMPT = `<system>
 You are a professional human cover letter writer specialized in tailoring content to specific job roles.

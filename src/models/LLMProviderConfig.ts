@@ -4,7 +4,7 @@
  * Storage: Browser local storage (plaintext)
  */
 
-import { LLMProviderEnum } from './coverLetterContent';
+import { LLMProviderEnum } from './CoverLetterContent';
 
 export interface LLMProviderConfig {
   /** Selected provider */
