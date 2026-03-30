@@ -28,18 +28,78 @@ browser.runtime.onMessage.addListener((msg: unknown) => {
   return Promise.resolve();
 });
 
-// 🌟 更新后的 saveToNotion 函数
+// 🌟 支持动态探测表头的 saveToNotion 函数
 async function saveToNotion(payload: any) {
   try {
     const { apiKey, dbId, jobData } = payload;
 
-    // 1. 组装 remarks 文本
-    const remarksText = `【公司】${jobData.company || '未知'}
+    // ==========================================
+    // 第一步：先读取 Notion 数据库的表头 (Schema)
+    // ==========================================
+    const dbResponse = await fetch(`https://api.notion.com/v1/databases/${dbId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Notion-Version': '2022-06-28'
+      }
+    });
+
+    if (!dbResponse.ok) {
+      const dbError = await dbResponse.json();
+      return { success: false, error: `读取数据库失败: ${dbError.message}` };
+    }
+
+    const dbInfo = await dbResponse.json();
+    const dbProperties = dbInfo.properties; // 这里包含了数据库所有的列名信息
+
+    // ==========================================
+    // 第二步：动态匹配列名并组装 Properties
+    // ==========================================
+    const pageProperties: any = {};
+
+    // 1. 动态寻找标题列 (Notion 数据库一定有且仅有一个 type 为 'title' 的主键列)
+    // 哪怕你的第一列不叫 "Name" 叫 "职位"，它也能自动找到并填入
+    let titlePropName = 'Name'; 
+    for (const [key, value] of Object.entries(dbProperties)) {
+      if ((value as any).type === 'title') {
+        titlePropName = key;
+        break;
+      }
+    }
+    pageProperties[titlePropName] = {
+      title: [{ text: { content: jobData.title || '未提取到标题' } }]
+    };
+
+    // 2. 探测 "URL平台" 列是否存在
+    if (dbProperties['URL平台']) {
+      pageProperties['URL平台'] = {
+        url: jobData.url || null
+      };
+    }
+
+    // 3. 探测 "remarks" 列是否存在
+    if (dbProperties['remarks']) {
+      const remarksText = `【公司】${jobData.company || '未知'}
 【地点】${jobData.location || '未知'}
 【发布时间】${jobData.postedAt || '未知'}
 【申请人数】${jobData.applicantCount || '未知'}`;
 
-    // 2. 处理过长的职位描述，切分为多个段落区块
+      pageProperties['remarks'] = {
+        rich_text: [{ text: { content: remarksText } }]
+      };
+    }
+    // 4. 探测 "信息渠道" 列是否存在 (多选类型 multi_select)
+    if (dbProperties['信息渠道']) {
+      pageProperties['信息渠道'] = {
+        multi_select: [
+          { name: '领英' } // 注意：多选题必须是一个数组，里面包着带 name 的对象
+        ]
+      };
+    }
+
+    // ==========================================
+    // 第三步：处理正文 (Description)，并分块避免超长报错
+    // ==========================================
     const childrenBlocks = [];
     if (jobData.description) {
       const chunkSize = 2000; 
@@ -49,35 +109,21 @@ async function saveToNotion(payload: any) {
           object: 'block',
           type: 'paragraph',
           paragraph: {
-            rich_text: [
-              {
-                type: 'text',
-                text: { content: chunk }
-              }
-            ]
+            rich_text: [{ type: 'text', text: { content: chunk } }]
           }
         });
       }
     }
 
-    // 3. 构造请求 Payload
+    // ==========================================
+    // 第四步：发送最终请求，创建页面
+    // ==========================================
     const notionPayload = {
       parent: { database_id: dbId },
-      properties: {
-        "Name": { 
-          title: [{ text: { content: jobData.title || '未提取到标题' } }] 
-        },
-        "URL平台": { 
-          url: jobData.url || null 
-        },
-        "remarks": { 
-          rich_text: [{ text: { content: remarksText } }] 
-        }
-      },
+      properties: pageProperties,
       children: childrenBlocks
     };
 
-    // 4. 发起请求
     const response = await fetch('https://api.notion.com/v1/pages', {
       method: 'POST',
       headers: {
@@ -88,19 +134,15 @@ async function saveToNotion(payload: any) {
       body: JSON.stringify(notionPayload)
     });
 
-    // 5. 🌟 错误处理：如果 Notion 返回 400/500 错误，直接返回 success: false
     if (!response.ok) {
       const errorData = await response.json();
       console.error('Notion API Error:', errorData);
-      return { success: false, error: `Notion 报错: ${errorData.message}` };
+      return { success: false, error: `保存失败: ${errorData.message}` };
     }
 
-    // 6. 🌟 成功处理：包装一层 success: true 告诉前端成功了
-    const data = await response.json();
-    return { success: true};
+    return { success: true };
 
   } catch (error) {
-    // 7. 🌟 捕获代码级别的异常（比如断网了）
     console.error('Save to Notion caught error:', error);
     return { 
       success: false, 
