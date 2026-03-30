@@ -21,12 +21,12 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 8 # 或者你本地使用的 pnpm 版本
+          version: 10 # 或者你本地使用的 pnpm 版本
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # 建议使用 LTS 版本
+          node-version: '24' # 建议使用 LTS 版本
           cache: 'pnpm'
 
       - name: Install Dependencies
