@@ -13,7 +13,12 @@ export type GenerateCoverLetterMessage = {
   payload: Task;
 };
 
-export type Message = ExportPDFMessage | GenerateCoverLetterMessage;
+export type SaveToNotionMessage = {
+  type: 'SAVE_TO_NOTION';
+  payload: any; // TODO: May be changed later
+};
+
+export type Message = ExportPDFMessage | GenerateCoverLetterMessage | SaveToNotionMessage;
 
 export function isExportPDFMessage(message: Message): message is ExportPDFMessage {
   return message.type === 'EXPORT_PDF';

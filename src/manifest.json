@@ -7,14 +7,16 @@
     "https://linkedin.com/*",
     "https://arbetsformedlingen.se/*",
     "https://www.arbetsformedlingen.se/*",
-    "https://cvcl-render.jollydesert-dd44d466.swedencentral.azurecontainerapps.io/*"
+    "https://cvcl-render.jollydesert-dd44d466.swedencentral.azurecontainerapps.io/*",
+    "https://api.notion.com/*"
   ],
   "{{firefox}}.permissions": [
     "https://www.linkedin.com/*",
     "https://linkedin.com/*",
     "https://arbetsformedlingen.se/*",
     "https://www.arbetsformedlingen.se/*",
-    "https://cvcl-render.jollydesert-dd44d466.swedencentral.azurecontainerapps.io/*"
+    "https://cvcl-render.jollydesert-dd44d466.swedencentral.azurecontainerapps.io/*",
+    "https://api.notion.com/*"
   ],
   "content_scripts": [
     {

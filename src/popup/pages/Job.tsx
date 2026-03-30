@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/pop
 import { Input } from '@/popup/components/ui/input';
 import { Label } from '@/popup/components/ui/label';
 import { Textarea } from '@/popup/components/ui/textarea';
-import { Badge } from '@/popup/components/ui/badge';
 import { Button } from '@/popup/components/ui/button';
 import { Spinner } from '@/popup/components/ui/spinner';
 import { Alert, AlertDescription } from '@/popup/components/ui/alert';
@@ -27,6 +26,10 @@ export default function Job() {
   const [error, setError] = useState<string | null>(null);
   const [currentUrl, setCurrentUrl] = useState<string>('');
   const [instructions, setInstructions] = useState<SectionInstructions>({});
+  
+  // 🌟 新增：Notion 保存状态
+  const [isSavingNotion, setIsSavingNotion] = useState(false);
+  
   const navigate = useNavigate();
 
   // On mount: get current tab URL and try extract job details
@@ -50,7 +53,6 @@ export default function Job() {
 
     try {
       const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-      console.log('[Job] Active tabs:', tabs);
       if (!tabs[0]?.id) {
         throw new Error('No active tab found');
       }
@@ -63,7 +65,7 @@ export default function Job() {
         throw new Error('Please navigate to a LinkedIn or Arbetsförmedlingen job posting to extract job details');
       }
 
-      const response = await contentScript.extractJobDetails();;
+      const response = await contentScript.extractJobDetails();
       if (response instanceof Error) {
         setError(response.message);
       } else {
@@ -106,9 +108,67 @@ export default function Job() {
     }
   }, [jobDetails?.id]);
 
+  // 处理保存到 Notion 的逻辑
+  const handleSaveToNotion = async () => {
+    if (!title.trim()) {
+      toast.error('Please ensure Title is filled before saving.');
+      return;
+    }
+
+    // 使用正则智能清理结尾的 "… more"、"... more" 或 "...more" (忽略大小写)
+    const cleanDescription = description
+      .trim()
+      .replace(/(?:\.\.\.|…)?\s*(?:see|show)?\s*more$/i, '')
+      .trim();
+
+    // 整合当前的表单数据和之前提取到的隐藏数据(location, postedAt等)
+    const currentJobData = {
+      ...jobDetails,
+      title,
+      company,
+      description: cleanDescription,
+      url: jobDetails?.url || currentUrl,
+    };
+
+    setIsSavingNotion(true);
+    const toastId = toast.loading('Saving to Notion...');
+
+    try {
+      // 获取用户在 Settings 中填写的 Notion 配置
+      const result = await browser.storage.sync.get(['notionApiKey', 'notionDbId']);
+      if (!result.notionApiKey || !result.notionDbId) {
+        toast.dismiss(toastId);
+        toast.error('Notion not configured. Please go to Settings first.');
+        return;
+      }
+
+      // 发送消息给 background script
+      const response = await browser.runtime.sendMessage({
+        type: 'SAVE_TO_NOTION',
+        payload: {
+          apiKey: result.notionApiKey,
+          dbId: result.notionDbId,
+          jobData: currentJobData,
+        },
+      })as { success: boolean; error?: string };
+
+      toast.dismiss(toastId);
+      if (response && response.success) {
+        toast.success('🎉 Successfully saved to Notion!');
+      } else {
+        toast.error(`Save failed: ${response?.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      toast.dismiss(toastId);
+      toast.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+      console.error('[Job] Save to Notion error:', err);
+    } finally {
+      setIsSavingNotion(false);
+    }
+  };
+
   const handleGenerateCoverLetter = async () => {
     try {
-      // Validate inputs
       if (!company.trim() || !title.trim() || !description.trim()) {
         toast.error('Please fill in all required fields');
         return;
@@ -126,10 +186,8 @@ export default function Job() {
         return;
       }
 
-      // Load LLM config
       const llmConfig = await browserStorageService.loadLLMSettings();
 
-      // Update jobDetails with latest form values
       const updatedJobDetails: JobDetails = {
         ...jobDetails,
         company,
@@ -137,7 +195,6 @@ export default function Job() {
         description,
       };
 
-      // Create generation task with instructions and LLM config
       const task = createTask(userProfile, updatedJobDetails, {
         instructions,
         model: llmConfig?.model,
@@ -151,7 +208,6 @@ export default function Job() {
         toast.error(result.message);
       } else {
         toast.success('Cover letter generation started! Check the Generation tab for progress.');
-        // Redirect to tasks page
         navigate('/tasks');
       }
     } catch (err) {
@@ -176,13 +232,34 @@ export default function Job() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {(currentUrl.includes('linkedin.com/jobs') || 
-            currentUrl.includes('arbetsformedlingen.se/platsbanken/annonser')) && (
-            <div className="flex gap-2">
+          
+          {/* 🌟 按钮操作区：改为上下排列 (flex-col)，Notion 按钮在上 */}
+          <div className="flex flex-col gap-2">
+            
+            {/* 1. Save to Notion 按钮放在最上面 */}
+            <Button 
+              onClick={handleSaveToNotion} 
+              disabled={isSavingNotion || !title.trim() || !company.trim()}
+              className="w-full bg-black text-white hover:bg-zinc-800"
+            >
+              {isSavingNotion ? (
+                <>
+                  <Spinner className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                '💾 Save to Notion'
+              )}
+            </Button>
+
+            {/* 2. Extract 按钮放在下面 */}
+            {(currentUrl.includes('linkedin.com/jobs') || 
+              currentUrl.includes('arbetsformedlingen.se/platsbanken/annonser')) && (
               <Button 
                 onClick={handleExtractJob} 
                 disabled={isExtracting}
                 className="w-full"
+                variant="outline"
               >
                 {isExtracting ? (
                   <>
@@ -190,11 +267,11 @@ export default function Job() {
                     Extracting...
                   </>
                 ) : (
-                  'Extract from Current Page'
+                  'Extract Job'
                 )}
               </Button>
-            </div>
-          )}
+            )}
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="company">
@@ -246,6 +323,7 @@ export default function Job() {
         </CardContent>
       </Card>
 
+      {/* 生成指令区块及底部的 Start Generation 按钮保留不变 */}
       <Card>
         <CardHeader>
           <CardTitle>Generation Instructions</CardTitle>
