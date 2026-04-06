@@ -135,12 +135,32 @@ export default function Job() {
 
     try {
       // 获取用户在 Settings 中填写的 Notion 配置
-      const result = await browser.storage.sync.get(['notionApiKey', 'notionDbId']);
+      const result = await browser.storage.sync.get(['notionApiKey', 'notionDbId', 'skillsMapping']);
       if (!result.notionApiKey || !result.notionDbId) {
         toast.dismiss(toastId);
         toast.error('Notion not configured. Please go to Settings first.');
         return;
       }
+
+      console.log('skillsMapping:', result.skillsMapping); // 调试输出映射关系
+
+      // 🌟 核心匹配算法，允许skillsmapping为空
+      const matchedSkills: string[] = [];
+      if (result.skillsMapping) {
+        const lines = (result.skillsMapping as string).split('\n');
+        const lowerJD = description.toLowerCase(); // 转小写匹配，提高命中率
+
+        lines.forEach(line => {
+          const [matchWord, notionTag] = line.split(':').map(s => s.trim());
+          if (matchWord && notionTag && lowerJD.includes(matchWord.toLowerCase())) {
+            // 如果匹配到了，且标签还没在结果里，就加进去
+            if (!matchedSkills.includes(notionTag)) {
+              matchedSkills.push(notionTag);
+            }
+          }
+        });
+      }
+      console.log('Matched skills based on mapping:', matchedSkills);
 
       // 发送消息给 background script
       const response = await browser.runtime.sendMessage({
@@ -149,6 +169,7 @@ export default function Job() {
           apiKey: result.notionApiKey,
           dbId: result.notionDbId,
           jobData: currentJobData,
+          matchedSkills: matchedSkills, // 🌟 传给后台
         },
       })as { success: boolean; error?: string };
 

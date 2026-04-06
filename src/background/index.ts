@@ -31,7 +31,7 @@ browser.runtime.onMessage.addListener((msg: unknown) => {
 // 🌟 支持动态探测表头的 saveToNotion 函数
 async function saveToNotion(payload: any) {
   try {
-    const { apiKey, dbId, jobData } = payload;
+    const { apiKey, dbId, jobData, matchedSkills } = payload;
 
     // ==========================================
     // 第一步：先读取 Notion 数据库的表头 (Schema)
@@ -88,12 +88,21 @@ async function saveToNotion(payload: any) {
         rich_text: [{ text: { content: remarksText } }]
       };
     }
+    
     // 4. 探测 "信息渠道" 列是否存在 (多选类型 multi_select)
     if (dbProperties['信息渠道']) {
       pageProperties['信息渠道'] = {
         multi_select: [
           { name: '领英' } // 注意：多选题必须是一个数组，里面包着带 name 的对象
         ]
+      };
+    }
+
+    // 5. 处理 "领域&技能点" 多选列
+    console.log('in background, matchedSkills:', matchedSkills);
+    if (dbProperties['领域&技能点'] && matchedSkills && matchedSkills.length > 0) {
+      pageProperties['领域&技能点'] = {
+        multi_select: matchedSkills.map((tag: string) => ({ name: tag }))
       };
     }
 

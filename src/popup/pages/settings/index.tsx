@@ -20,10 +20,13 @@ export default function Settings() {
   const [clearLoading, setClearLoading] = useState(false);
   const [clearSuccess, setClearSuccess] = useState(false);
 
-  // 🌟 新增：Notion 的状态
+  // 🌟 Notion 的基础状态
   const [notionApiKey, setNotionApiKey] = useState('');
   const [notionDbId, setNotionDbId] = useState('');
   const [savingNotion, setSavingNotion] = useState(false);
+
+  // 🌟 Notion 的高级映射状态 (带有默认值)
+  const [skillsMapping, setSkillsMapping] = useState('python:Python\njava:Java\n嵌入式:嵌入式\n开发:软件开发');
 
   // Load config on mount
   useEffect(() => {
@@ -45,27 +48,31 @@ export default function Settings() {
     }
   };
 
-  // 🌟 新增：读取 Chrome Storage 中的 Notion 配置
+  // 🌟 读取 Chrome Storage 中的 Notion 配置 (加入 as string 修复 TS 报错)
   const loadNotionSettings = () => {
-    chrome.storage.sync.get(['notionApiKey', 'notionDbId'], (result) => {
-      if (result.notionApiKey) setNotionApiKey(result.notionApiKey);
-      if (result.notionDbId) setNotionDbId(result.notionDbId);
+    chrome.storage.sync.get([
+      'notionApiKey', 'notionDbId', 'titleCol', 'urlCol', 'remarksCol', 'remarksTemplate', 'skillsMapping'
+    ], (result) => {
+      if (result.notionApiKey) setNotionApiKey(result.notionApiKey as string);
+      if (result.notionDbId) setNotionDbId(result.notionDbId as string);
+      if (result.skillsMapping !== undefined) setSkillsMapping(result.skillsMapping as string);
     });
   };
 
-  // 🌟 新增：保存 Notion 配置的函数
+  // 🌟 保存 Notion 配置
   const handleSaveNotion = async () => {
     setSavingNotion(true);
     try {
       await new Promise<void>((resolve) => {
         chrome.storage.sync.set({
           notionApiKey: notionApiKey.trim(),
-          notionDbId: notionDbId.trim()
+          notionDbId: notionDbId.trim(),
+          skillsMapping: skillsMapping
         }, () => resolve());
       });
-      toast.success('Notion 配置保存成功！');
+      toast.success('Notion settings saved successfully!');
     } catch (err) {
-      toast.error('Notion 配置保存失败');
+      toast.error('Failed to save Notion settings');
       console.error(err);
     } finally {
       setSavingNotion(false);
@@ -78,11 +85,16 @@ export default function Settings() {
     setError(null);
     try {
       await storageService.clearAllData();
-      // 🌟 清理数据时顺便把 Notion 配置也清空
-      await new Promise<void>((resolve) => chrome.storage.sync.remove(['notionApiKey', 'notionDbId'], resolve));
+      // 🌟 清理数据时顺便把 Notion 所有配置清空，并重置为默认值
+      await new Promise<void>((resolve) => chrome.storage.sync.remove([
+        'notionApiKey', 'notionDbId', 'titleCol', 'urlCol', 'remarksCol', 'remarksTemplate', 'skillsMapping'
+      ], resolve));
+      
       setConfig(null);
       setNotionApiKey('');
       setNotionDbId('');
+      setSkillsMapping('python:Python\njava:Java\n嵌入式:嵌入式\n开发:软件开发');
+      
       setClearSuccess(true);
       toast.success('All data cleared successfully.');
     } catch (err) {
@@ -141,36 +153,59 @@ export default function Settings() {
         onValidate={handleValidate}
       />
 
-      {/* 🌟 新增的 Notion 设置区块 */}
+      {/* 🌟 Notion 设置区块 */}
       <Card>
         <CardHeader>
           <CardTitle>Notion Integration</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-              Notion API Secret
-            </label>
-            <input
-              type="password"
-              value={notionApiKey}
-              onChange={(e) => setNotionApiKey(e.target.value)}
-              placeholder="secret_xxxxxxxxxxxxxxxxx"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            />
+        <CardContent className="space-y-6">
+          {/* 基础认证信息 */}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Notion API Secret
+              </label>
+              <input
+                type="password"
+                value={notionApiKey}
+                onChange={(e) => setNotionApiKey(e.target.value)}
+                placeholder="secret_xxxxxxxxxxxxxxxxx"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Database ID
+              </label>
+              <input
+                type="text"
+                value={notionDbId}
+                onChange={(e) => setNotionDbId(e.target.value)}
+                placeholder="1234567890abcdef..."
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-              Database ID
-            </label>
-            <input
-              type="text"
-              value={notionDbId}
-              onChange={(e) => setNotionDbId(e.target.value)}
-              placeholder="1234567890abcdef..."
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            />
+
+          {/* 字段映射配置 */}
+          <div className="pt-4 border-t border-border space-y-4">
+            <h4 className="text-sm font-semibold">Database Mapping (Optional)</h4>
+            
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">Skills Mapping Dictionary</label>
+              <p className="text-[10px] text-muted-foreground leading-tight">
+                Format: <code className="bg-muted px-1 rounded">KeywordInJD:NotionTag</code>. One per line. Used to automatically assign tags to the multi-select property.
+              </p>
+              <textarea 
+                value={skillsMapping} 
+                onChange={(e) => setSkillsMapping(e.target.value)} 
+                rows={4}
+                placeholder="python:Python&#10;java:Java"
+                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
           </div>
+
           <Button
             className="w-full"
             onClick={handleSaveNotion}
